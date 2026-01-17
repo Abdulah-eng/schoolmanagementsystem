@@ -1,5 +1,6 @@
 #!/bin/bash
-set -e
+# Don't use set -e, handle errors manually to prevent crashes
+set +e
 
 echo "🚀 Starting Laravel application..."
 
@@ -53,8 +54,9 @@ if ! grep -q "APP_KEY=base64:" .env 2>/dev/null || grep -q "^APP_KEY=$" .env 2>/
             fi
             echo "✅ Application key generated: ${GENERATED_KEY:0:20}..."
         else
-            echo "❌ ERROR: Could not generate APP_KEY. Please set it manually in Railway variables."
-            exit 1
+            echo "⚠️  WARNING: Could not generate APP_KEY automatically."
+            echo "⚠️  Please set APP_KEY manually in Railway variables, or the app may not work correctly."
+            echo "⚠️  Continuing anyway - you can set it later..."
         fi
     }
 else
@@ -64,16 +66,42 @@ fi
 # Run database migrations
 echo "🗄️  Running database migrations..."
 php artisan migrate --force
+MIGRATE_EXIT=$?
+if [ $MIGRATE_EXIT -ne 0 ]; then
+    echo "⚠️  WARNING: Migrations may have failed (exit code: $MIGRATE_EXIT)"
+    echo "⚠️  Continuing anyway - check logs for details"
+fi
 
 # Clear any cached config first (in case .env changed)
-php artisan config:clear || true
+echo "🧹 Clearing old caches..."
+php artisan config:clear 2>/dev/null || true
+php artisan route:clear 2>/dev/null || true
+php artisan view:clear 2>/dev/null || true
 
 # Optimize Laravel for production
 echo "⚡ Optimizing Laravel..."
-php artisan config:cache || echo "⚠️  Config cache skipped"
-php artisan route:cache || echo "⚠️  Route cache skipped"
-php artisan view:cache || echo "⚠️  View cache skipped"
+php artisan config:cache 2>&1
+CONFIG_CACHE_EXIT=$?
+if [ $CONFIG_CACHE_EXIT -ne 0 ]; then
+    echo "⚠️  Config cache failed, but continuing..."
+fi
 
-# Start the server
+php artisan route:cache 2>&1 || echo "⚠️  Route cache skipped"
+php artisan view:cache 2>&1 || echo "⚠️  View cache skipped"
+
+# Verify APP_KEY is set before starting
+if ! grep -q "APP_KEY=base64:" .env 2>/dev/null; then
+    echo "❌ CRITICAL: APP_KEY is not set!"
+    echo "❌ Please set APP_KEY in Railway Variables and redeploy"
+    echo "❌ Generating a temporary key to prevent crash..."
+    TEMP_KEY=$(php artisan key:generate --show 2>/dev/null | grep -o "base64:[^ ]*" | head -1)
+    if [ -n "$TEMP_KEY" ]; then
+        echo "APP_KEY=$TEMP_KEY" >> .env
+        echo "✅ Temporary key set, but please set APP_KEY in Railway Variables!"
+    fi
+fi
+
+# Start the server (this should never exit unless server crashes)
 echo "🌐 Starting server on port $PORT..."
-exec php artisan serve --host=0.0.0.0 --port=$PORT
+echo "✅ Server starting - check logs if issues occur"
+php artisan serve --host=0.0.0.0 --port=$PORT
