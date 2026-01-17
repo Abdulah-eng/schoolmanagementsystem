@@ -4,8 +4,8 @@ services:
     env: php
     region: oregon
     plan: free
-    buildCommand: composer install --no-dev --optimize-autoloader && php artisan key:generate --force && npm install && npm run build
-    startCommand: php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=$PORT
+    buildCommand: composer install --no-dev --optimize-autoloader && npm install && npm run build
+    startCommand: bash railway-start.sh
     healthCheckPath: /
     envVars:
       - key: APP_ENV

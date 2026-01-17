@@ -183,6 +183,8 @@ php artisan db:seed --force  # Optional: seed demo data
 
 ## 🚀 Quick Start: Railway Deployment
 
+> **📖 For detailed Railway deployment instructions, see [RAILWAY_DEPLOYMENT.md](./RAILWAY_DEPLOYMENT.md)**
+
 ### Step 1: Prepare Repository
 ```bash
 # Make sure .env.example exists
@@ -204,7 +206,7 @@ git push origin main
 2. Railway creates database automatically
 
 ### Step 4: Configure Environment
-In Railway project settings, add these variables:
+In Railway project settings → "Variables" tab, add:
 ```
 APP_ENV=production
 APP_DEBUG=false
@@ -218,18 +220,14 @@ DB_USERNAME=${{Postgres.PGUSER}}
 DB_PASSWORD=${{Postgres.PGPASSWORD}}
 ```
 
-### Step 5: Deploy
-Railway will automatically:
-- Install dependencies
+**Note**: The `railway-start.sh` script will automatically:
+- Generate APP_KEY if not set
 - Run migrations
+- Cache configuration
 - Start the server
 
-### Step 6: Run Migrations
-In Railway, go to your service → "Deployments" → "View Logs"
-Or use Railway CLI:
-```bash
-railway run php artisan migrate --force
-```
+### Step 5: Deploy
+Railway will automatically build and deploy. Check logs if issues occur.
 
 ---
 
