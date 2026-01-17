@@ -72,10 +72,29 @@ If deployment fails:
 
 ## 🔧 Troubleshooting
 
-### Issue: "APP_KEY not found"
+### Issue: "APP_KEY not found" or 500 Error
 **Solution**: The startup script will auto-generate it. If it persists:
-1. Go to Variables tab
-2. Add: `APP_KEY` (leave value empty, or generate one locally with `php artisan key:generate --show`)
+
+**Option 1: Let script auto-generate (Recommended)**
+- The `railway-start.sh` script will automatically create .env and generate APP_KEY
+- Just redeploy and check logs
+
+**Option 2: Manually set APP_KEY**
+1. Generate a key locally:
+   ```bash
+   php artisan key:generate --show
+   ```
+2. Copy the output (e.g., `base64:yXPZLo/L352Sy5rUdnLJB96+5IjEEJvkJSHSV6Mw5JY=`)
+3. Go to Railway → Your Service → Variables tab
+4. Add new variable:
+   - Key: `APP_KEY`
+   - Value: `base64:yXPZLo/L352Sy5rUdnLJB96+5IjEEJvkJSHSV6Mw5JY=` (your generated key)
+5. Redeploy
+
+**Option 3: Check deployment logs**
+- Go to Deployments → Latest → Deploy Logs
+- Look for "📝 Generating application key..." message
+- If it fails, you'll see the error there
 
 ### Issue: "Database connection failed"
 **Solution**: 
