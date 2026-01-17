@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: edufocus
+    env: php
+    region: oregon
+    plan: free
+    buildCommand: composer install --no-dev --optimize-autoloader && php artisan key:generate --force && npm install && npm run build
+    startCommand: php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=$PORT
+    healthCheckPath: /
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: false
+      - key: LOG_LEVEL
+        value: error
+      - key: PHP_VERSION
+        value: 8.2
+
+databases:
+  - name: edufocus-db
+    plan: free
+    databaseName: edufocus
+    user: edufocus
