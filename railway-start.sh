@@ -93,11 +93,27 @@ php artisan view:cache 2>&1 || echo "⚠️  View cache skipped"
 if ! grep -q "APP_KEY=base64:" .env 2>/dev/null; then
     echo "❌ CRITICAL: APP_KEY is not set!"
     echo "❌ Please set APP_KEY in Railway Variables and redeploy"
-    echo "❌ Generating a temporary key to prevent crash..."
+    echo "❌ Attempting to generate key..."
+    # Try multiple methods to generate key
     TEMP_KEY=$(php artisan key:generate --show 2>/dev/null | grep -o "base64:[^ ]*" | head -1)
+    if [ -z "$TEMP_KEY" ]; then
+        # Alternative: use openssl if available
+        TEMP_KEY="base64:$(openssl rand -base64 32 2>/dev/null | tr -d '\n')"
+    fi
     if [ -n "$TEMP_KEY" ]; then
-        echo "APP_KEY=$TEMP_KEY" >> .env
-        echo "✅ Temporary key set, but please set APP_KEY in Railway Variables!"
+        # Update .env file
+        if grep -q "^APP_KEY=" .env 2>/dev/null; then
+            sed -i.bak "s|^APP_KEY=.*|APP_KEY=$TEMP_KEY|" .env 2>/dev/null || \
+            sed -i "s|^APP_KEY=.*|APP_KEY=$TEMP_KEY|" .env 2>/dev/null || \
+            echo "APP_KEY=$TEMP_KEY" >> .env
+        else
+            echo "APP_KEY=$TEMP_KEY" >> .env
+        fi
+        echo "✅ Temporary key generated and set"
+        echo "⚠️  WARNING: Please set APP_KEY in Railway Variables for persistence!"
+    else
+        echo "❌ Could not generate key automatically"
+        echo "❌ You MUST set APP_KEY in Railway Variables!"
     fi
 fi
 
