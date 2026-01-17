@@ -36,19 +36,27 @@ fi
 # Generate APP_KEY if not set
 if ! grep -q "APP_KEY=base64:" .env 2>/dev/null || grep -q "^APP_KEY=$" .env 2>/dev/null; then
     echo "📝 Generating application key..."
-    # Generate key and update .env
-    GENERATED_KEY=$(php artisan key:generate --show 2>/dev/null || echo "")
-    if [ -n "$GENERATED_KEY" ]; then
-        # Update .env file with generated key
-        if [ -f .env ]; then
-            sed -i "s|^APP_KEY=.*|APP_KEY=$GENERATED_KEY|" .env || \
-            sed -i.bak "s|^APP_KEY=.*|APP_KEY=$GENERATED_KEY|" .env || \
-            echo "APP_KEY=$GENERATED_KEY" >> .env
+    # Use --force to generate and write to .env
+    php artisan key:generate --force 2>&1 | head -5 || {
+        echo "⚠️  Key generation failed, trying alternative method..."
+        # Alternative: generate key and manually update .env
+        GENERATED_KEY=$(php artisan key:generate --show 2>&1 | grep -o "base64:[^ ]*" | head -1)
+        if [ -n "$GENERATED_KEY" ]; then
+            # Use a more portable sed command
+            if command -v sed >/dev/null 2>&1; then
+                sed -i.bak "s|^APP_KEY=.*|APP_KEY=$GENERATED_KEY|" .env 2>/dev/null || \
+                sed -i "s|^APP_KEY=.*|APP_KEY=$GENERATED_KEY|" .env 2>/dev/null || \
+                echo "APP_KEY=$GENERATED_KEY" >> .env
+            else
+                # Fallback: append if sed doesn't work
+                echo "APP_KEY=$GENERATED_KEY" >> .env
+            fi
+            echo "✅ Application key generated: ${GENERATED_KEY:0:20}..."
+        else
+            echo "❌ ERROR: Could not generate APP_KEY. Please set it manually in Railway variables."
+            exit 1
         fi
-        echo "✅ Application key generated"
-    else
-        echo "⚠️  Could not generate key, using existing or will fail"
-    fi
+    }
 else
     echo "✅ APP_KEY already configured"
 fi
